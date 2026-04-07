@@ -1,3 +1,4 @@
+```markdown
 # Nmap Report Generator
 
 Generate a detailed Markdown report from an Nmap XML scan.  
@@ -25,6 +26,7 @@ cd nmap_report_generator
 python3 -m venv venv
 source venv/bin/activate
 pip install python-dotenv
+```
 
 ## Usage
 
