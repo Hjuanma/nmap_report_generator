@@ -9,6 +9,22 @@ class NmapParser:
         self.root = self.tree.getroot()
         self.args = self.root.get('args', '')
 
+    def get_target(self) -> str:
+        """Extract target IP or hostname from the first <host> element."""
+        host = self.root.find('.//host')
+        if host is not None:
+            addr = host.find('.//address')
+            if addr is not None:
+                addr_val = addr.get('addr')
+                if addr_val:
+                    return addr_val
+        # Fallback: try to extract from command args
+        import re
+        match = re.search(r'(\d+\.\d+\.\d+\.\d+|[a-zA-Z0-9.-]+)$', self.args)
+        if match:
+            return match.group(1)
+        return 'unknown_target'
+
     def _parse_features(self) -> Dict[str, bool]:
         args = self.args
         return {
