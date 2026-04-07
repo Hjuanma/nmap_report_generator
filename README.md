@@ -2,28 +2,39 @@
 # Nmap Report Generator
 
 Generate a detailed Markdown report from an Nmap XML scan.  
-The report includes open ports (only those with identifiable services), OS detection, vulnerabilities (CVEs) found by `--script vuln`, and a limitations section based on which Nmap flags were used.  
-Optionally, it can enrich CVEs with CVSS scores, publication dates, and solution links from the NVD API.
+The report includes host discovery, open ports (only those with identifiable services), OS detection, vulnerabilities (CVEs) found by `--script vuln`, and optional enrichment with NVD data (CVSS, publication date, impact description, solution links).  
+It can also discover additional CVEs by building CPEs from service versions and querying the NVD API, with prioritization of high‑impact services.
 
 ## Features
 
 - Parses any Nmap XML file (generated with `-oX`).
-- Detects which scan options were enabled (version detection, OS detection, vuln scripts, etc.).
+- Detects which scan options were enabled (version detection, OS detection, vuln scripts, aggressive scan, etc.).
 - Shows `--NO SCANNED--` for data that was not requested.
-- Outputs a clean Markdown report in English.
-- Extracts CVEs from script outputs.
-- **Optional enrichment** with NVD data (CVSS, published date, description, patch links) – requires API key.
-- **Smart port table** – only shows ports with identifiable services (excludes `tcpwrapped`/`unknown`) and shows a total count.
-- **Automatic output naming** – report name is derived from the XML file (e.g., `scan.xml` → `scan_report.md`).
-- **JSON output** – use `--json` to also generate a machine‑readable version.
-- **Custom output location** – use `-o` to specify a directory or file path.
-- Modular code ready for future extensions.
+- **Host Discovery** – displays host status, IP, MAC, hostname.
+- **Smart port table** – only shows ports with identifiable services (excludes `tcpwrapped`/`unknown`) with total count and omitted note.
+- **OS Detection** – lists matched operating systems with accuracy.
+- **Vulnerability extraction** – from `--script vuln` outputs.
+- **Optional NVD enrichment** – for CVEs found in scripts (requires API key):
+  - CVSS score (v3.1, v3.0, v2 fallback)
+  - Publication date
+  - Enriched description
+  - Solution links (patches/updates)
+  - **Impact description** – human‑readable text based on CVSS and keywords.
+- **CPE‑based enrichment** – automatically builds CPEs from service product/version and queries NVD for additional CVEs.
+  - **Prioritization** – processes only the most critical services first (web servers, databases, remote access, etc.).
+  - Configurable limit (`--max-cpes`).
+- **JSON output** – machine‑readable version with `--json`.
+- **Smart output naming** – by default uses XML basename + `_report.md` (e.g., `scan.xml` → `scan_report.md`).
+- **Custom output location** – with `-o` (directory or file path).
+- **Environment variables** – `.env` support for `NVD_API_KEY`.
+- Modular code (SOLID principles) – ready for further extensions.
 
 ## Requirements
 
 - Python 3.7+
 - `requests`
-- `python-dotenv` (for loading environment variables)
+- `python-dotenv`
+- `nvdlib` (for CPE‑based enrichment)
 
 ## Installation
 
@@ -32,20 +43,20 @@ git clone https://github.com/yourusername/nmap_report_generator.git
 cd nmap_report_generator
 python3 -m venv venv
 source venv/bin/activate
-pip install requests python-dotenv
+pip install requests python-dotenv nvdlib
 ```
 
-## Configuration (Optional but Recommended for Enrichment)
+## Configuration (Optional but Recommended)
 
-Create a `.env` file in the `src/` directory (or in the root where you run the script) with your NVD API key:
+Create a `.env` file in the `src/` directory (or where you run the script) with your NVD API key:
 
 ```ini
 NVD_API_KEY=your-api-key-here
 ```
 
-You can obtain a free NVD API key from [NVD API Key Request](https://nvd.nist.gov/developers/request-an-api-key).
-
-If no API key is provided, the script will skip CVE enrichment and only show the original script output.
+You can obtain a free API key from [NVD API Key Request](https://nvd.nist.gov/developers/request-an-api-key).  
+Without an API key, CPE‑based enrichment will be skipped (NVD rate limits make it impractical).  
+The script will still enrich CVEs from `--script vuln` if you provide the key.
 
 ## Usage
 
@@ -69,22 +80,31 @@ If no API key is provided, the script will skip CVE enrichment and only show the
   - `-o ./my_report.md` → saves the Markdown report as `my_report.md` (JSON becomes `my_report.json` if `--json`).
   - `-o ./custom_prefix` → adds `.md` or `.json` automatically.
 
-Examples:
-```bash
-# Default: scan.xml -> scan_report.md
-python main.py scan.xml
-
-# Save in a specific directory (files named report.md, report.json)
-python main.py scan.xml -o ./reports/
-
-# Save with custom filename (and also JSON)
-python main.py scan.xml -o ./output/scan1.md --json
-```
-
 ### Options
 
-- `--json` : Also generate a JSON version of the report.
-- `-o, --output` : Custom output directory or file prefix.
+| Argument | Description |
+|----------|-------------|
+| `xml_file` | Path to Nmap XML file (required). |
+| `-o, --output` | Output directory or file prefix. |
+| `--json` | Also generate a JSON version of the report. |
+| `--cpe-enrich` | Enable CPE‑based enrichment (requires API key). |
+| `--max-cpes` | Max number of CPEs to process (by priority). Default: 10. |
+
+Examples:
+
+```bash
+# Basic report (no CPE enrichment)
+python main.py scan.xml
+
+# With CPE enrichment (process top 5 critical services)
+python main.py scan.xml --cpe-enrich --max-cpes 5
+
+# Save in a directory and also JSON
+python main.py scan.xml -o ./reports/ --json
+
+# Custom filename with enrichment
+python main.py scan.xml -o critical_scan.md --cpe-enrich
+```
 
 ## Project Structure
 
@@ -93,27 +113,37 @@ nmap_report_generator/
 ├── src/
 │   ├── main.py                  # Entry point
 │   ├── parser/
-│   │   └── nmap_parser.py       # XML parsing logic
+│   │   └── nmap_parser.py       # XML parsing (host, ports, OS, scripts)
 │   ├── models/
-│   │   └── data_models.py       # Dataclasses for scan data
+│   │   └── data_models.py       # Dataclasses (Port, HostInfo, Vulnerability, etc.)
 │   ├── reporters/
-│   │   ├── markdown_reporter.py # Markdown generation
-│   │   └── json_reporter.py     # JSON generation
+│   │   ├── markdown_reporter.py # Markdown report generation
+│   │   └── json_reporter.py     # JSON report generation
 │   ├── templates/
 │   │   └── markdown_templates.py # Text templates (English)
 │   └── utils/
 │       ├── env_loader.py        # Loads .env variables
 │       ├── nvd_api.py           # NVD API client (with caching)
-│       ├── enricher.py          # Enriches vulnerabilities with NVD data
+│       ├── enricher.py          # Enriches CVEs from vuln scripts
+│       ├── cve_enricher.py      # CPE‑based enrichment with prioritization
+│       ├── impact_generator.py  # Generates human‑readable impact text
 │       └── file_utils.py        # Output path resolution
 ├── .env                         # Optional: NVD_API_KEY
 ├── requirements.txt
 └── README.md
 ```
 
-## Example Report Snippet (with Enrichment)
+## Example Report Snippet (with enrichment)
 
 ```markdown
+## Host Discovery
+
+- **Status:** up (reason: echo-reply)
+- **IPv4:** 192.168.1.10
+- **IPv6:** --
+- **MAC:** 00:11:22:33:44:55
+- **Hostname:** webserver
+
 ## Open Ports
 
 **Total open ports:** 398
@@ -123,15 +153,14 @@ nmap_report_generator/
 | Port | Protocol | Service | Product | Version |
 |------|----------|---------|---------|---------|
 | 53 | tcp | domain | NLnet Labs NSD | --NO SCANNED-- |
-| 80 | tcp | http-proxy | HAProxy http proxy | --NO SCANNED-- |
+| 80 | tcp | http | Apache httpd | 2.4.49 |
 | 443 | tcp | http | OpenResty web app server | --NO SCANNED-- |
-| 9100 | tcp | jetdirect | --NO SCANNED-- | --NO SCANNED-- |
 
 ## Vulnerability Scan (Script vuln)
 
-| CVE | CVSS | Published | Script | Description / Solution |
-|-----|------|-----------|--------|------------------------|
-| CVE-2007-6750 | 7.5 | 2007-12-19 | http-slowloris-check | Slowloris DOS attack... **Solution:** [patch](https://github.com/...) |
+| CVE | CVSS | Published | Script | Description / Solution | Impact |
+|-----|------|-----------|--------|------------------------|--------|
+| CVE-2021-41773 | 9.8 | 2021-10-05 | http-vuln-cve2021-41773 | Path traversal in Apache 2.4.49... **Solution:** [patch](https://...) | Critical: Attacker could gain complete control of the system remotely. Remote code execution possible. |
 ```
 
 ## Limitations & Notes
@@ -140,11 +169,13 @@ The report automatically includes a "Limitations & Notes" section based on which
 
 ## Future Enhancements
 
-- Export to PDF via `pandoc`.
-- Web interface (Django/Flask) for uploading XML and viewing reports.
-- Support for multiple languages (Spanish, etc.) via template switching.
+- Directory base configurable via environment variable.
+- PDF export via `pandoc`.
 - Group vulnerabilities by severity.
-- Option to limit number of CVEs shown.
+- Executive summary with totals.
+- Cache persistent CVE data to avoid repeated API calls.
+- UDP port table support.
+- Web interface (Django/Flask).
 
 ## License
 
