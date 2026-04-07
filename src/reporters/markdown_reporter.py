@@ -22,10 +22,30 @@ class MarkdownReporter:
 
         # Open ports
         md += MD_TEMPLATES['open_ports_header']
-        if self.data.open_ports:
+        all_ports = self.data.open_ports
+        total_open = len(all_ports)
+        
+        # Count tcpwrapped ports
+        tcpwrapped_count = sum(1 for p in all_ports if p.service_name == 'tcpwrapped')
+        
+        # Meaningful ports (not tcpwrapped and not unknown)
+        meaningful_ports = [
+            p for p in all_ports
+            if p.service_name and p.service_name.lower() not in ['tcpwrapped', 'unknown']
+        ]
+        
+        # Show summary
+        md += f"**Total open ports:** {total_open}\n"
+        if tcpwrapped_count > 0:
+            md += f"*Note: {tcpwrapped_count} port(s) with 'tcpwrapped' (open but no service identified) are not shown in the table below.*\n"
+        
+        if total_open == 0:
+            md += MD_TEMPLATES['no_open_ports']
+        elif not meaningful_ports:
+            md += "*No ports with identifiable services were found (all are 'tcpwrapped' or unknown).*\n"
+        else:
             md += MD_TEMPLATES['open_ports_table']
-            for p in self.data.open_ports:
-                # Handle missing service name
+            for p in meaningful_ports:
                 service_name = p.service_name if p.service_name else 'unknown'
                 if self.features['version_detection']:
                     product = p.product if p.product else '--NO SCANNED--'
@@ -40,9 +60,8 @@ class MarkdownReporter:
                     product=product,
                     version=version
                 )
-        else:
-            md += MD_TEMPLATES['no_open_ports']
-
+            if len(meaningful_ports) < total_open:
+                md += f"\n*... and {total_open - len(meaningful_ports)} additional open ports with no identifiable service omitted.*\n"
         # OS detection
         md += MD_TEMPLATES['os_detection_header']
         if self.features['os_detection']:
@@ -79,6 +98,9 @@ class MarkdownReporter:
             md += MD_TEMPLATES['limitation_all_ports']
         if not self.features['udp_scan']:
             md += MD_TEMPLATES['limitation_udp']
+        else:
+            # If UDP was scanned but no open ports, you could add a note (optional)
+            pass
         if not self.features['traceroute']:
             md += MD_TEMPLATES['limitation_traceroute']
         if not self.features['default_scripts']:
