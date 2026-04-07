@@ -1,3 +1,4 @@
+```markdown
 # Nmap Report Generator
 
 Generate a detailed Markdown report from an Nmap XML scan.  
@@ -11,9 +12,12 @@ Optionally, it can enrich CVEs with CVSS scores, publication dates, and solution
 - Shows `--NO SCANNED--` for data that was not requested.
 - Outputs a clean Markdown report in English.
 - Extracts CVEs from script outputs.
-- Enrich CVEs with NVD data (CVSS, published date, description, patch links) – requires API key.
-- Improved port table – only shows ports with identifiable services (excludes `tcpwrapped`/`unknown`).
-- Modular code ready for future extensions (JSON output, web interface, PDF export).
+- **Optional enrichment** with NVD data (CVSS, published date, description, patch links) – requires API key.
+- **Smart port table** – only shows ports with identifiable services (excludes `tcpwrapped`/`unknown`) and shows a total count.
+- **Automatic output naming** – report name is derived from the XML file (e.g., `scan.xml` → `scan_report.md`).
+- **JSON output** – use `--json` to also generate a machine‑readable version.
+- **Custom output location** – use `-o` to specify a directory or file path.
+- Modular code ready for future extensions.
 
 ## Requirements
 
@@ -24,7 +28,7 @@ Optionally, it can enrich CVEs with CVSS scores, publication dates, and solution
 ## Installation
 
 ```bash
-git clone https://github.com/hjuanma/nmap_report_generator.git
+git clone https://github.com/yourusername/nmap_report_generator.git
 cd nmap_report_generator
 python3 -m venv venv
 source venv/bin/activate
@@ -37,7 +41,6 @@ Create a `.env` file in the `src/` directory (or in the root where you run the s
 
 ```ini
 NVD_API_KEY=your-api-key-here
-OUTPUT_FORMAT=md   # md or json
 ```
 
 You can obtain a free NVD API key from [NVD API Key Request](https://nvd.nist.gov/developers/request-an-api-key).
@@ -57,11 +60,31 @@ If no API key is provided, the script will skip CVE enrichment and only show the
    python main.py /path/to/scan.xml
    ```
 
-3. The report will be saved as `report.md` in the current directory.
+### Output Naming
+
+- **By default** (without `-o`), the report is named after the XML file:
+  - `scan.xml` → `scan_report.md` (and `scan_report.json` if `--json` is used)
+- Use `-o` or `--output` to specify a custom location:
+  - `-o ./results/` → saves `report.md` and `report.json` inside the `results/` directory.
+  - `-o ./my_report.md` → saves the Markdown report as `my_report.md` (JSON becomes `my_report.json` if `--json`).
+  - `-o ./custom_prefix` → adds `.md` or `.json` automatically.
+
+Examples:
+```bash
+# Default: scan.xml -> scan_report.md
+python main.py scan.xml
+
+# Save in a specific directory (files named report.md, report.json)
+python main.py scan.xml -o ./reports/
+
+# Save with custom filename (and also JSON)
+python main.py scan.xml -o ./output/scan1.md --json
+```
 
 ### Options
 
-- `--json` : Also generate a JSON version of the report (`report.json`).
+- `--json` : Also generate a JSON version of the report.
+- `-o, --output` : Custom output directory or file prefix.
 
 ## Project Structure
 
@@ -81,8 +104,9 @@ nmap_report_generator/
 │   └── utils/
 │       ├── env_loader.py        # Loads .env variables
 │       ├── nvd_api.py           # NVD API client (with caching)
-│       └── enricher.py          # Enriches vulnerabilities with NVD data
-├── .env                         # Optional: NVD_API_KEY, OUTPUT_FORMAT
+│       ├── enricher.py          # Enriches vulnerabilities with NVD data
+│       └── file_utils.py        # Output path resolution
+├── .env                         # Optional: NVD_API_KEY
 ├── requirements.txt
 └── README.md
 ```
@@ -120,6 +144,7 @@ The report automatically includes a "Limitations & Notes" section based on which
 - Web interface (Django/Flask) for uploading XML and viewing reports.
 - Support for multiple languages (Spanish, etc.) via template switching.
 - Group vulnerabilities by severity.
+- Option to limit number of CVEs shown.
 
 ## License
 
