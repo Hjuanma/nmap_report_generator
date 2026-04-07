@@ -1,5 +1,5 @@
 """Data models placeholder."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 
 @dataclass
@@ -20,6 +20,10 @@ class Vulnerability:
     cve: str
     script: str
     output_snippet: str
+    cvss_score: Optional[float] = None
+    published_date: Optional[str] = None
+    enriched_description: Optional[str] = None
+    solution_urls: List[str] = field(default_factory=list)
 
 @dataclass
 class ScanMetadata:

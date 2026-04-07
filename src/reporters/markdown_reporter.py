@@ -20,30 +20,24 @@ class MarkdownReporter:
             enabled_features=self._format_enabled_features()
         )
 
-        # Open ports
+        # ----- Open ports (improved) -----
         md += MD_TEMPLATES['open_ports_header']
-        all_ports = self.data.open_ports
-        total_open = len(all_ports)
-        
-        # Count tcpwrapped ports
-        tcpwrapped_count = sum(1 for p in all_ports if p.service_name == 'tcpwrapped')
-        
-        # Meaningful ports (not tcpwrapped and not unknown)
+        total_open_ports = len(self.data.open_ports)
+        md += f"**Total open ports:** {total_open_ports}\n\n"
+
         meaningful_ports = [
-            p for p in all_ports
+            p for p in self.data.open_ports
             if p.service_name and p.service_name.lower() not in ['tcpwrapped', 'unknown']
         ]
-        
-        # Show summary
-        md += f"**Total open ports:** {total_open}\n"
-        if tcpwrapped_count > 0:
-            md += f"*Note: {tcpwrapped_count} port(s) with 'tcpwrapped' (open but no service identified) are not shown in the table below.*\n"
-        
-        if total_open == 0:
+
+        if total_open_ports == 0:
             md += MD_TEMPLATES['no_open_ports']
         elif not meaningful_ports:
             md += "*No ports with identifiable services were found (all are 'tcpwrapped' or unknown).*\n"
         else:
+            omitted = total_open_ports - len(meaningful_ports)
+            if omitted > 0:
+                md += f"*Only ports with identifiable services are listed below. The remaining {omitted} ports were found open but the service could not be identified (tagged as 'tcpwrapped' or 'unknown').*\n\n"
             md += MD_TEMPLATES['open_ports_table']
             for p in meaningful_ports:
                 service_name = p.service_name if p.service_name else 'unknown'
@@ -60,9 +54,8 @@ class MarkdownReporter:
                     product=product,
                     version=version
                 )
-            if len(meaningful_ports) < total_open:
-                md += f"\n*... and {total_open - len(meaningful_ports)} additional open ports with no identifiable service omitted.*\n"
-        # OS detection
+
+        # ----- OS detection -----
         md += MD_TEMPLATES['os_detection_header']
         if self.features['os_detection']:
             if self.data.os_matches:
@@ -74,17 +67,33 @@ class MarkdownReporter:
         else:
             md += MD_TEMPLATES['os_not_scanned']
 
-        # Vulnerabilities
+        # ----- Vulnerabilities (enriched if available) -----
         md += MD_TEMPLATES['vuln_header']
         if self.features['vuln_scripts']:
             if self.data.vulnerabilities:
-                md += MD_TEMPLATES['vuln_table_header']
-                for i, v in enumerate(self.data.vulnerabilities[:20]):
-                    md += MD_TEMPLATES['vuln_row'].format(
-                        cve=v.cve,
-                        script=v.script,
-                        snippet=v.output_snippet[:100]
-                    )
+                # Use a wider table if enrichment was done (has cvss and published)
+                has_enrichment = any(v.cvss_score is not None for v in self.data.vulnerabilities)
+                if has_enrichment:
+                    md += "| CVE | CVSS | Published | Script | Description / Solution |\n"
+                    md += "|-----|------|-----------|--------|------------------------|\n"
+                    for v in self.data.vulnerabilities[:20]:
+                        cvss = f"{v.cvss_score:.1f}" if v.cvss_score is not None else "--"
+                        published = v.published_date if v.published_date else "--"
+                        desc = v.enriched_description if v.enriched_description else v.output_snippet[:100]
+                        if v.solution_urls:
+                            sol_links = ", ".join([f"[patch]({url})" for url in v.solution_urls[:2]])
+                            desc_solution = f"{desc}<br>**Solution:** {sol_links}"
+                        else:
+                            desc_solution = desc
+                        md += f"| {v.cve} | {cvss} | {published} | {v.script} | {desc_solution} |\n"
+                else:
+                    md += MD_TEMPLATES['vuln_table_header']
+                    for v in self.data.vulnerabilities[:20]:
+                        md += MD_TEMPLATES['vuln_row'].format(
+                            cve=v.cve,
+                            script=v.script,
+                            snippet=v.output_snippet[:100]
+                        )
                 if len(self.data.vulnerabilities) > 20:
                     md += MD_TEMPLATES['vuln_more'].format(remaining=len(self.data.vulnerabilities)-20)
             else:
@@ -92,15 +101,12 @@ class MarkdownReporter:
         else:
             md += MD_TEMPLATES['vuln_not_scanned']
 
-        # Limitations
+        # ----- Limitations -----
         md += MD_TEMPLATES['limitations_header']
         if not self.features['all_ports']:
             md += MD_TEMPLATES['limitation_all_ports']
         if not self.features['udp_scan']:
             md += MD_TEMPLATES['limitation_udp']
-        else:
-            # If UDP was scanned but no open ports, you could add a note (optional)
-            pass
         if not self.features['traceroute']:
             md += MD_TEMPLATES['limitation_traceroute']
         if not self.features['default_scripts']:
