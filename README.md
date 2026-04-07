@@ -1,4 +1,4 @@
-```markdown
+
 # Nmap Report Generator
 
 Generate a detailed Markdown report from an Nmap XML scan.  
