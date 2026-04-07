@@ -1,6 +1,7 @@
 from models.data_models import ScanData, Vulnerability
 from utils.nvd_api import get_cve_details
 from utils.env_loader import get_nvd_api_key
+from utils.impact_generator import generate_impact
 
 def enrich_vulnerabilities(data: ScanData) -> ScanData:
     """Add NVD details to each vulnerability if API key is available."""
@@ -20,6 +21,7 @@ def enrich_vulnerabilities(data: ScanData) -> ScanData:
             vuln.published_date = details['published']
             vuln.enriched_description = details['description']
             vuln.solution_urls = details['solution_urls']
+            vuln.impact_description = generate_impact(details['cvss'], details['description'])
         else:
             vuln.cvss_score = None
             vuln.published_date = None

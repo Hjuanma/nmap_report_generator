@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
 import re
 from typing import Dict, List
-from models.data_models import ScanData, ScanMetadata, Port, OSMatch, Vulnerability
+from models.data_models import ScanData, ScanMetadata, Port, OSMatch, Vulnerability, HostInfo
 
 class NmapParser:
     def __init__(self, xml_path: str):
@@ -35,6 +35,7 @@ class NmapParser:
             'udp_scan': '-sU' in args,
             'all_ports': '-p-' in args or '-p 1-65535' in args,
             'traceroute': '--traceroute' in args,
+            'aggressive_scan': '-A' in args,
         }
 
     def get_metadata(self) -> ScanMetadata:
@@ -83,11 +84,35 @@ class NmapParser:
                         output_snippet=output[:300].replace('\n', ' ')
                     ))
         return vulns
-
+    
+    def get_host_info(self) -> HostInfo:
+        host = self.root.find('.//host')
+        if host is None:
+            return HostInfo(status='unknown', reason='')
+        status_elem = host.find('status')
+        status = status_elem.get('state', 'unknown') if status_elem is not None else 'unknown'
+        reason = status_elem.get('reason', '') if status_elem is not None else ''
+        # Addresses
+        ipv4 = None
+        ipv6 = None
+        mac = None
+        for addr in host.findall('address'):
+            addr_type = addr.get('addrtype')
+            if addr_type == 'ipv4':
+                ipv4 = addr.get('addr')
+            elif addr_type == 'ipv6':
+                ipv6 = addr.get('addr')
+            elif addr_type == 'mac':
+                mac = addr.get('addr')
+        hostname_elem = host.find('.//hostname')
+        hostname = hostname_elem.get('name') if hostname_elem is not None else None
+        return HostInfo(status=status, reason=reason, ipv4=ipv4, ipv6=ipv6, mac=mac, hostname=hostname)
+    
     def get_all_data(self) -> ScanData:
         return ScanData(
             metadata=self.get_metadata(),
             open_ports=self.get_open_ports(),
             os_matches=self.get_os_matches(),
-            vulnerabilities=self.get_vulnerabilities()
+            vulnerabilities=self.get_vulnerabilities(),
+            host_info=self.get_host_info()
         )
