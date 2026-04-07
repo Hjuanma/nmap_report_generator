@@ -11,6 +11,8 @@ The following features were **enabled** (flags present in the command):
 {enabled_features}
 
 """,
+    'host_discovery_header': "## Host Discovery\n\n",
+    'host_info_row': "- **Status:** {status} (reason: {reason})\n- **IPv4:** {ipv4}\n- **IPv6:** {ipv6}\n- **MAC:** {mac}\n- **Hostname:** {hostname}\n",
     'enabled_feature': "- {feature}\n",
     'open_ports_header': "## Open Ports\n\n",
     'open_ports_table': "| Port | Protocol | Service | Product | Version |\n|------|----------|---------|---------|---------|\n",

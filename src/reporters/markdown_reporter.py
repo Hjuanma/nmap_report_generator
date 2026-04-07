@@ -20,6 +20,18 @@ class MarkdownReporter:
             enabled_features=self._format_enabled_features()
         )
 
+        # ----- Host Discovery section -----
+        md += MD_TEMPLATES['host_discovery_header']
+        host = self.data.host_info
+        md += MD_TEMPLATES['host_info_row'].format(
+            status=host.status,
+            reason=host.reason if host.reason else '--',
+            ipv4=host.ipv4 if host.ipv4 else '--',
+            ipv6=host.ipv6 if host.ipv6 else '--',
+            mac=host.mac if host.mac else '--',
+            hostname=host.hostname if host.hostname else '--'
+        )
+
         # ----- Open ports (improved) -----
         md += MD_TEMPLATES['open_ports_header']
         total_open_ports = len(self.data.open_ports)
@@ -71,11 +83,10 @@ class MarkdownReporter:
         md += MD_TEMPLATES['vuln_header']
         if self.features['vuln_scripts']:
             if self.data.vulnerabilities:
-                # Use a wider table if enrichment was done (has cvss and published)
                 has_enrichment = any(v.cvss_score is not None for v in self.data.vulnerabilities)
                 if has_enrichment:
-                    md += "| CVE | CVSS | Published | Script | Description / Solution |\n"
-                    md += "|-----|------|-----------|--------|------------------------|\n"
+                    md += "| CVE | CVSS | Published | Script | Description / Solution | Impact |\n"
+                    md += "|-----|------|-----------|--------|------------------------|--------|\n"
                     for v in self.data.vulnerabilities[:20]:
                         cvss = f"{v.cvss_score:.1f}" if v.cvss_score is not None else "--"
                         published = v.published_date if v.published_date else "--"
@@ -85,7 +96,8 @@ class MarkdownReporter:
                             desc_solution = f"{desc}<br>**Solution:** {sol_links}"
                         else:
                             desc_solution = desc
-                        md += f"| {v.cve} | {cvss} | {published} | {v.script} | {desc_solution} |\n"
+                        impact = v.impact_description if v.impact_description else "--"
+                        md += f"| {v.cve} | {cvss} | {published} | {v.script} | {desc_solution} | {impact} |\n"
                 else:
                     md += MD_TEMPLATES['vuln_table_header']
                     for v in self.data.vulnerabilities[:20]:
