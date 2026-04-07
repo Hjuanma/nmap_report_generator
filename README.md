@@ -41,7 +41,7 @@ pip install python-dotenv
    python main.py /path/to/scan.xml
    ```
 
-3. The report will be saved as `report.md` in the current directory.
+3. The report will be saved in the `results/` folder as `<target>_report.md` (where `<target>` is the IP or hostname extracted from the XML).
 
 ### Options
 
@@ -52,19 +52,22 @@ pip install python-dotenv
 ```
 nmap_report_generator/
 ├── src/
-│   ├── main.py                  # Entry point
+│   ├── main.py
 │   ├── parser/
-│   │   └── nmap_parser.py       # XML parsing logic
-│   ├── models/
-│   │   └── data_models.py       # Dataclasses for scan data
+│   │   └── nmap_parser.py
 │   ├── reporters/
-│   │   ├── markdown_reporter.py # Markdown generation
-│   │   └── json_reporter.py     # JSON generation
+│   │   ├── markdown_reporter.py
+│   │   └── json_reporter.py
 │   ├── templates/
-│   │   └── markdown_templates.py # Text templates (English)
+│   │   └── markdown_templates.py
+│   ├── models/
+│   │   └── data_models.py
 │   └── utils/
-│       └── env_loader.py        # Environment variables (optional)
-├── .env                         # Optional: NVD_API_KEY, OUTPUT_FORMAT
+│       └── env_loader.py
+├── results/                     # <-- se crea automáticamente
+│   ├── 192.168.1.1_report.md
+│   └── 192.168.1.1_report.json (si --json)
+├── .env
 ├── requirements.txt
 └── README.md
 ```
