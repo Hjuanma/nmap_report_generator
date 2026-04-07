@@ -15,12 +15,15 @@ from reporters.markdown_reporter import MarkdownReporter
 from reporters.json_reporter import JsonReporter
 from utils.enricher import enrich_vulnerabilities
 from utils.file_utils import OutputResolver
+from utils.cve_enricher import enrich_with_cpes
 
 def main():
     parser = argparse.ArgumentParser(description='Generate report from Nmap XML.')
     parser.add_argument('xml_file', help='Path to Nmap XML file')
     parser.add_argument('-o', '--output', help='Output directory or file prefix (default: derived from XML name)')
     parser.add_argument('--json', action='store_true', help='Also generate JSON report')
+    parser.add_argument('--max-cpes', type=int, default=10, help='Max number of CPEs to enrich (by priority)')
+    parser.add_argument('--cpe-enrich', action='store_true', help='Enrich CVEs from service CPEs (requires API key)')
     args = parser.parse_args()
 
     print(f"📄 Parsing {args.xml_file}...")
@@ -29,6 +32,9 @@ def main():
 
     # Enrich with NVD if API key is available
     data = enrich_vulnerabilities(data)
+
+    if args.cpe_enrich:
+        data = enrich_with_cpes(data, max_cpes=args.max_cpes)
 
         # Base output directory (default: "results")
     base_dir = "results"
