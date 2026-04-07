@@ -30,14 +30,27 @@ def main():
     # Enrich with NVD if API key is available
     data = enrich_vulnerabilities(data)
 
-    # Determine output paths
-    if args.output:
-        md_path = OutputResolver.resolve_path(args.output, is_json=False)
-        json_path = OutputResolver.resolve_path(args.output, is_json=True) if args.json else None
-    else:
-        md_path = OutputResolver.default_name_from_xml(args.xml_file, is_json=False)
-        json_path = OutputResolver.default_name_from_xml(args.xml_file, is_json=True) if args.json else None
+        # Base output directory (default: "results")
+    base_dir = "results"
 
+    if args.output:
+        # Check if output is absolute or explicitly relative (starts with /, ./, ../)
+        if args.output.startswith(('/', './', '../')):
+            # Use as-is (user wants full control)
+            md_path = OutputResolver.resolve_path(args.output, is_json=False)
+            json_path = OutputResolver.resolve_path(args.output, is_json=True) if args.json else None
+        else:
+            # Treat as relative to base_dir
+            md_path = OutputResolver.resolve_path(os.path.join(base_dir, args.output), is_json=False)
+            json_path = OutputResolver.resolve_path(os.path.join(base_dir, args.output), is_json=True) if args.json else None
+    else:
+        # No -o: save inside base_dir with default names
+        md_name = OutputResolver.default_name_from_xml(args.xml_file, is_json=False)
+        json_name = OutputResolver.default_name_from_xml(args.xml_file, is_json=True) if args.json else None
+        md_path = OutputResolver.resolve_path(base_dir, is_json=False, default_name=md_name)
+        json_path = OutputResolver.resolve_path(base_dir, is_json=True, default_name=json_name) if args.json else None
+
+    
     # Write Markdown report
     md_reporter = MarkdownReporter(data)
     with open(md_path, 'w', encoding='utf-8') as f:
