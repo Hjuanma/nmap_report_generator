@@ -38,7 +38,7 @@ It can also discover additional CVEs by building CPEs from service versions and 
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/nmap_report_generator.git
+git clone https://github.com/Hjuanma/nmap_report_generator.git
 cd nmap_report_generator
 python3 -m venv venv
 source venv/bin/activate
