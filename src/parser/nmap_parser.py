@@ -1,3 +1,16 @@
+# ============================================================
+# Copyright (C) 2025 Hjuanma
+#
+# This source code is licensed under the Common Sense License
+# (CSL) v1.1.
+#
+# You may obtain a copy of the license at:
+# https://github.com/shmaplex/csl
+#
+# Large-Scale Commercial Users must comply with contribution
+# requirements described in Section 8 of the License.
+# ============================================================
+
 import xml.etree.ElementTree as ET
 import re
 from typing import Dict, List

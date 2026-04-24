@@ -184,5 +184,4 @@ This project is licensed under the
 Free for individuals, nonprofits, researchers, and small businesses.
 Large-Scale Commercial Users (revenue ≥ $10M/year) must contribute
 back per Section 8 of the License.
-
 ```
