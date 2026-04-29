@@ -41,3 +41,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Improved CLI help text for `--pdf` option.
+- Remove emojis from report output for cleaner formatting and PDF compatibility.
+- Enhanced PDF export with xelatex engine and font configuration (DejaVu Sans).
+- Add "Known Issues & Workarounds" section in README for PDF Unicode handling.
+- Remove duplicate severity breakdown in markdown_reporter.py.

@@ -75,14 +75,6 @@ class MarkdownReporter:
         md += "\n### Recommendation\n\n"
         md += self._get_recommendation() + "\n\n"
 
-        # Severity breakdown
-        sev_counts = self._severity_breakdown()
-        md += MD_TEMPLATES['severity_breakdown_header']
-        md += MD_TEMPLATES['severity_table_header']
-        for sev in ["Critical", "High", "Medium", "Low", "Not scored"]:
-            md += MD_TEMPLATES['severity_row'].format(severity=sev, count=sev_counts[sev])
-        md += "\n"
-
         # ----- Host Discovery section -----
         md += MD_TEMPLATES['host_discovery_header']
         host = self.data.host_info
