@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.0] - 2025-04-07
+## [1.0.0] - 2025-04-20
 
 ### Added
 - Initial release.
@@ -24,3 +24,9 @@ All notable changes to this project will be documented in this file.
 
 ### Security
 - None.
+
+## [1.1.0] - 2026-04-28
+
+### Added
+- Executive summary section with totals.
+- Vulnerability severity grouping (Critical, High, Medium, Low, Not scored).
