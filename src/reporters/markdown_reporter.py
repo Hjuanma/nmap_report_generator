@@ -216,13 +216,13 @@ class MarkdownReporter:
         critical = any(v.cvss_score is not None and v.cvss_score >= 9.0 for v in self.data.vulnerabilities)
         high = any(v.cvss_score is not None and 7.0 <= v.cvss_score < 9.0 for v in self.data.vulnerabilities)
         if critical:
-            return "CRITICAL 🔴"
+            return "CRITICAL"
         elif high:
-            return "HIGH 🟠"
+            return "HIGH"
         elif any(v.cvss_score is not None for v in self.data.vulnerabilities):
-            return "MEDIUM 🟡"
+            return "MEDIUM"
         else:
-            return "LOW 🟢 (no CVSS scores available)"
+            return "LOW (no CVSS scores available)"
 
     def _get_top_cves(self, limit: int = 3) -> list:
         """Return top N CVEs sorted by CVSS score descending (only those with CVSS)."""
@@ -236,10 +236,10 @@ class MarkdownReporter:
         critical = any(v.cvss_score is not None and v.cvss_score >= 9.0 for v in self.data.vulnerabilities)
         high = any(v.cvss_score is not None and 7.0 <= v.cvss_score < 9.0 for v in self.data.vulnerabilities)
         if critical:
-            return "⚠️ **Immediate action required:** Patch or mitigate critical vulnerabilities as soon as possible."
+            return "**Immediate action required:** Patch or mitigate critical vulnerabilities as soon as possible."
         elif high:
-            return "📅 **Schedule remediation:** High severity vulnerabilities found. Plan fixes within 7 days."
+            return "**Schedule remediation:** High severity vulnerabilities found. Plan fixes within 7 days."
         elif any(v.cvss_score is not None for v in self.data.vulnerabilities):
-            return "🛠️ **Review as scheduled:** Medium/low severity vulnerabilities. Address during normal maintenance."
+            return "**Review as scheduled:** Medium/low severity vulnerabilities. Address during normal maintenance."
         else:
-            return "✅ **No known vulnerabilities detected.** Keep security practices updated."
+            return "**No known vulnerabilities detected.** Keep security practices updated."
