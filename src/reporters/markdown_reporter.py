@@ -11,6 +11,8 @@
 # requirements described in Section 8 of the License.
 # ============================================================
 
+from typing import Optional
+
 from models.data_models import ScanData
 from templates.markdown_templates import MD_TEMPLATES
 
@@ -32,6 +34,54 @@ class MarkdownReporter:
             start_time=self.data.metadata.start_time,
             enabled_features=self._format_enabled_features()
         )
+
+        # ----- Executive Summary -----
+        md += MD_TEMPLATES['executive_summary_header']
+        md += MD_TEMPLATES['executive_summary_table']
+        md += MD_TEMPLATES['executive_summary_row'].format(metric="Total open ports", value=str(len(self.data.open_ports)))
+
+        if self.data.os_matches:
+            os_names = ", ".join([os.name for os in self.data.os_matches[:3]])
+            md += MD_TEMPLATES['executive_summary_row'].format(metric="Detected OS", value=os_names)
+        else:
+            md += MD_TEMPLATES['executive_summary_row'].format(metric="Detected OS", value="--NO SCANNED-- or not found")
+
+        total_cves = len(self.data.vulnerabilities)
+        md += MD_TEMPLATES['executive_summary_row'].format(metric="Total CVEs found", value=str(total_cves))
+
+        # Overall Risk Rating
+        risk = self._get_overall_risk_rating()
+        md += MD_TEMPLATES['executive_summary_row'].format(metric="**Overall Risk Rating**", value=risk)
+
+        # Severity breakdown
+        sev_counts = self._severity_breakdown()
+        md += MD_TEMPLATES['severity_breakdown_header']
+        md += MD_TEMPLATES['severity_table_header']
+        for sev in ["Critical", "High", "Medium", "Low", "Not scored"]:
+            md += MD_TEMPLATES['severity_row'].format(severity=sev, count=sev_counts[sev])
+
+        # Top 3 most critical CVEs
+        top_cves = self._get_top_cves(3)
+        if top_cves:
+            md += "\n### Top 3 Most Critical CVEs\n\n"
+            md += "| CVE | CVSS | Impact |\n"
+            md += "|-----|------|--------|\n"
+            for cve in top_cves:
+                impact = cve.impact_description if cve.impact_description else "--"
+                cvss = f"{cve.cvss_score:.1f}" if cve.cvss_score is not None else "--"
+                md += f"| {cve.cve} | {cvss} | {impact[:100]} |\n"
+
+        # Recommendation
+        md += "\n### Recommendation\n\n"
+        md += self._get_recommendation() + "\n\n"
+
+        # Severity breakdown
+        sev_counts = self._severity_breakdown()
+        md += MD_TEMPLATES['severity_breakdown_header']
+        md += MD_TEMPLATES['severity_table_header']
+        for sev in ["Critical", "High", "Medium", "Low", "Not scored"]:
+            md += MD_TEMPLATES['severity_row'].format(severity=sev, count=sev_counts[sev])
+        md += "\n"
 
         # ----- Host Discovery section -----
         md += MD_TEMPLATES['host_discovery_header']
@@ -139,3 +189,57 @@ class MarkdownReporter:
 
         md += MD_TEMPLATES['footer']
         return md
+    
+    def _get_severity(self, cvss: Optional[float]) -> str:
+        if cvss is None:
+            return "Not scored"
+        if cvss >= 9.0:
+            return "Critical"
+        elif cvss >= 7.0:
+            return "High"
+        elif cvss >= 4.0:
+            return "Medium"
+        elif cvss > 0:
+            return "Low"
+        else:
+            return "Not scored"
+
+    def _severity_breakdown(self) -> dict:
+        counts = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Not scored": 0}
+        for vuln in self.data.vulnerabilities:
+            sev = self._get_severity(vuln.cvss_score)
+            counts[sev] = counts.get(sev, 0) + 1
+        return counts
+    
+    def _get_overall_risk_rating(self) -> str:
+        """Return overall risk rating based on CVSS scores."""
+        critical = any(v.cvss_score is not None and v.cvss_score >= 9.0 for v in self.data.vulnerabilities)
+        high = any(v.cvss_score is not None and 7.0 <= v.cvss_score < 9.0 for v in self.data.vulnerabilities)
+        if critical:
+            return "CRITICAL 🔴"
+        elif high:
+            return "HIGH 🟠"
+        elif any(v.cvss_score is not None for v in self.data.vulnerabilities):
+            return "MEDIUM 🟡"
+        else:
+            return "LOW 🟢 (no CVSS scores available)"
+
+    def _get_top_cves(self, limit: int = 3) -> list:
+        """Return top N CVEs sorted by CVSS score descending (only those with CVSS)."""
+        scored = [v for v in self.data.vulnerabilities if v.cvss_score is not None]
+        # Orden descendente, usando 0 como fallback (aunque nunca debería llegar)
+        scored.sort(key=lambda x: x.cvss_score if x.cvss_score is not None else 0, reverse=True)
+        return scored[:limit]
+
+    def _get_recommendation(self) -> str:
+        """Return actionable recommendation based on risk rating."""
+        critical = any(v.cvss_score is not None and v.cvss_score >= 9.0 for v in self.data.vulnerabilities)
+        high = any(v.cvss_score is not None and 7.0 <= v.cvss_score < 9.0 for v in self.data.vulnerabilities)
+        if critical:
+            return "⚠️ **Immediate action required:** Patch or mitigate critical vulnerabilities as soon as possible."
+        elif high:
+            return "📅 **Schedule remediation:** High severity vulnerabilities found. Plan fixes within 7 days."
+        elif any(v.cvss_score is not None for v in self.data.vulnerabilities):
+            return "🛠️ **Review as scheduled:** Medium/low severity vulnerabilities. Address during normal maintenance."
+        else:
+            return "✅ **No known vulnerabilities detected.** Keep security practices updated."
