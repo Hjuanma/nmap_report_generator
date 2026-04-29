@@ -30,3 +30,14 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Executive summary section with totals.
 - Vulnerability severity grouping (Critical, High, Medium, Low, Not scored).
+
+## [1.2.0] - 2026-04-28
+
+### Added
+- PDF export support via `--pdf` flag (requires `pandoc`).
+- Version pinning in `requirements.txt` (requests, python-dotenv, nvdlib).
+- Updated README with comprehensive feature documentation.
+- Removed "Future Enhancements" section (features implemented).
+
+### Changed
+- Improved CLI help text for `--pdf` option.
