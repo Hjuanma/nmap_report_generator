@@ -4,28 +4,33 @@
 [![Python](https://img.shields.io/badge/Python-3.7%2B-green)](https://www.python.org/)
 [![Code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-Generate a detailed Markdown report from an Nmap XML scan.  
-The report includes host discovery, open ports (only those with identifiable services), OS detection, vulnerabilities (CVEs) found by `--script vuln`, and optional enrichment with NVD data (CVSS, publication date, impact description, solution links).  
-It can also discover additional CVEs by building CPEs from service versions and querying the NVD API, with prioritization of high‑impact services.
+Generate a detailed **Markdown**, **JSON**, or **PDF** report from an Nmap XML scan.  
+The report includes:
+
+- **Executive Summary** – total open ports, detected OS, total CVEs, overall risk rating, severity breakdown, top 3 most critical CVEs, and an actionable recommendation.
+- **Host Discovery** – status, IP, MAC, hostname.
+- **Open Ports** – only ports with identifiable services (excludes `tcpwrapped`/`unknown`), with total count and omitted note.
+- **OS Detection** – matched operating systems with accuracy.
+- **Vulnerability Scan** – CVEs from `--script vuln`, enriched with NVD data (CVSS, publication date, description, solution links, impact text).
+- **CPE‑based enrichment** – automatically builds CPEs from service versions and queries NVD for additional CVEs, with prioritization of high‑impact services.
 
 ## Features
 
 - Parses any Nmap XML file (generated with `-oX`).
 - Detects which scan options were enabled (version detection, OS detection, vuln scripts, aggressive scan, etc.).
 - Shows `--NO SCANNED--` for data that was not requested.
-- **Host Discovery** – displays host status, IP, MAC, hostname.
-- **Smart port table** – only shows ports with identifiable services (excludes `tcpwrapped`/`unknown`) with total count and omitted note.
-- **OS Detection** – lists matched operating systems with accuracy.
-- **Vulnerability extraction** – from `--script vuln` outputs.
+- **Executive Summary** with overall risk rating (Critical, High, Medium, Low) and top 3 CVEs by CVSS.
+- **Smart port table** – only shows ports with identifiable services.
 - **Optional NVD enrichment** – for CVEs found in scripts (requires API key):
   - CVSS score (v3.1, v3.0, v2 fallback)
   - Publication date
   - Enriched description
   - Solution links (patches/updates)
   - **Impact description** – human‑readable text based on CVSS and keywords.
-- **CPE‑based enrichment** – automatically builds CPEs from service product/version and queries NVD for additional CVEs.
+- **CPE‑based enrichment** – builds CPEs from service product/version and queries NVD for additional CVEs.
   - **Prioritization** – processes only the most critical services first (web servers, databases, remote access, etc.).
   - Configurable limit (`--max-cpes`).
+- **PDF export** – convert the Markdown report to PDF (requires `pandoc`).
 - **JSON output** – machine‑readable version with `--json`.
 - **Smart output naming** – by default uses XML basename + `_report.md` (e.g., `scan.xml` → `scan_report.md`).
 - **Custom output location** – with `-o` (directory or file path).
@@ -38,6 +43,7 @@ It can also discover additional CVEs by building CPEs from service versions and 
 - `requests`
 - `python-dotenv`
 - `nvdlib` (for CPE‑based enrichment)
+- `pandoc` (optional, for PDF export)
 
 ## Installation
 
@@ -47,6 +53,11 @@ cd nmap_report_generator
 python3 -m venv venv
 source venv/bin/activate
 pip install requests python-dotenv nvdlib
+
+# Optional: install pandoc for PDF export
+sudo apt install pandoc   # Debian/Ubuntu/Kali
+# or brew install pandoc on macOS
+# or download from https://pandoc.org/installing.html
 ```
 
 ## Configuration (Optional but Recommended)
@@ -92,6 +103,7 @@ The script will still enrich CVEs from `--script vuln` if you provide the key.
 | `--json` | Also generate a JSON version of the report. |
 | `--cpe-enrich` | Enable CPE‑based enrichment (requires API key). |
 | `--max-cpes` | Max number of CPEs to process (by priority). Default: 10. |
+| `--pdf` | Convert the Markdown report to PDF (requires `pandoc`). |
 
 Examples:
 
@@ -105,8 +117,8 @@ python main.py scan.xml --cpe-enrich --max-cpes 5
 # Save in a directory and also JSON
 python main.py scan.xml -o ./reports/ --json
 
-# Custom filename with enrichment
-python main.py scan.xml -o critical_scan.md --cpe-enrich
+# Generate PDF report with full enrichment
+python main.py scan.xml --cpe-enrich --pdf --json
 ```
 
 ## Project Structure
@@ -139,11 +151,40 @@ nmap_report_generator/
 ## Example Report Snippet (with enrichment)
 
 ```markdown
+## Executive Summary
+
+| Metric | Value |
+|--------|-------|
+| Total open ports | 398 |
+| Detected OS | Linux 4.19 |
+| Total CVEs found | 42 |
+| **Overall Risk Rating** | **CRITICAL** 🔴 |
+
+### Vulnerabilities by Severity
+
+| Severity | Count |
+|----------|-------|
+| Critical | 3 |
+| High | 12 |
+| Medium | 18 |
+| Low | 5 |
+| Not scored | 4 |
+
+### Top 3 Most Critical CVEs
+
+| CVE | CVSS | Impact |
+|-----|------|--------|
+| CVE-2024-1234 | 9.8 | Critical: Remote code execution possible. |
+| CVE-2023-5678 | 9.0 | Critical: Privilege escalation. |
+
+### Recommendation
+
+⚠️ **Immediate action required:** Patch or mitigate critical vulnerabilities as soon as possible.
+
 ## Host Discovery
 
 - **Status:** up (reason: echo-reply)
 - **IPv4:** 192.168.1.10
-- **IPv6:** --
 - **MAC:** 00:11:22:33:44:55
 - **Hostname:** webserver
 
@@ -158,27 +199,11 @@ nmap_report_generator/
 | 53 | tcp | domain | NLnet Labs NSD | --NO SCANNED-- |
 | 80 | tcp | http | Apache httpd | 2.4.49 |
 | 443 | tcp | http | OpenResty web app server | --NO SCANNED-- |
-
-## Vulnerability Scan (Script vuln)
-
-| CVE | CVSS | Published | Script | Description / Solution | Impact |
-|-----|------|-----------|--------|------------------------|--------|
-| CVE-2021-41773 | 9.8 | 2021-10-05 | http-vuln-cve2021-41773 | Path traversal in Apache 2.4.49... **Solution:** [patch](https://...) | Critical: Attacker could gain complete control of the system remotely. Remote code execution possible. |
 ```
 
 ## Limitations & Notes
 
 The report automatically includes a "Limitations & Notes" section based on which flags were **not** used in the scan (e.g., missing `-p-`, `-sU`, `-sC`, etc.), so the reader understands what data might be incomplete.
-
-## Future Enhancements
-
-- Directory base configurable via environment variable.
-- PDF export via `pandoc`.
-- Group vulnerabilities by severity.
-- Executive summary with totals.
-- Cache persistent CVE data to avoid repeated API calls.
-- UDP port table support.
-- Web interface (Django/Flask).
 
 ## License
 
@@ -188,4 +213,3 @@ This project is licensed under the
 Free for individuals, nonprofits, researchers, and small businesses.
 Large-Scale Commercial Users (revenue ≥ $10M/year) must contribute
 back per Section 8 of the License.
-```
