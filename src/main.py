@@ -91,7 +91,14 @@ def main():
     if args.pdf:
         try:
             pdf_path = md_path.replace('.md', '.pdf')
-            subprocess.run(['pandoc', md_path, '-o', pdf_path], check=True, capture_output=True, text=True)
+            subprocess.run([
+                'pandoc', md_path,
+                '-o', pdf_path,
+                '--pdf-engine=xelatex',
+                '-V', 'geometry:margin=1in',
+                '-V', 'mainfont=DejaVu Sans',
+                '-V', 'monofont=DejaVu Sans Mono'
+            ], check=True, capture_output=True, text=True)
             print(f"✅ PDF report saved to {pdf_path}")
         except FileNotFoundError:
             print("⚠️ pandoc not found. Please install pandoc (https://pandoc.org/installing.html) to use --pdf.")
