@@ -31,7 +31,7 @@ All notable changes to this project will be documented in this file.
 - Executive summary section with totals.
 - Vulnerability severity grouping (Critical, High, Medium, Low, Not scored).
 
-## [1.2.0] - 2026-04-28
+## [1.1.5] - 2026-04-28
 
 ### Added
 - PDF export support via `--pdf` flag (requires `pandoc`).
