@@ -7,7 +7,7 @@
 Generate a detailed **Markdown**, **JSON**, or **PDF** report from an Nmap XML scan.  
 The report includes:
 
-- **Executive Summary** – total open ports, detected OS, total CVEs, overall risk rating, severity breakdown, top 3 most critical CVEs, and an actionable recommendation.
+- **Executive Summary** – total open ports, detected OS, total CVEs, overall risk rating (Critical/High/Medium/Low), severity breakdown, top 3 most critical CVEs, and an actionable recommendation.
 - **Host Discovery** – status, IP, MAC, hostname.
 - **Open Ports** – only ports with identifiable services (excludes `tcpwrapped`/`unknown`), with total count and omitted note.
 - **OS Detection** – matched operating systems with accuracy.
@@ -19,7 +19,7 @@ The report includes:
 - Parses any Nmap XML file (generated with `-oX`).
 - Detects which scan options were enabled (version detection, OS detection, vuln scripts, aggressive scan, etc.).
 - Shows `--NO SCANNED--` for data that was not requested.
-- **Executive Summary** with overall risk rating (Critical, High, Medium, Low) and top 3 CVEs by CVSS.
+- **Executive Summary** with overall risk rating (no emojis – fully compatible with PDF export).
 - **Smart port table** – only shows ports with identifiable services.
 - **Optional NVD enrichment** – for CVEs found in scripts (requires API key):
   - CVSS score (v3.1, v3.0, v2 fallback)
@@ -30,7 +30,7 @@ The report includes:
 - **CPE‑based enrichment** – builds CPEs from service product/version and queries NVD for additional CVEs.
   - **Prioritization** – processes only the most critical services first (web servers, databases, remote access, etc.).
   - Configurable limit (`--max-cpes`).
-- **PDF export** – convert the Markdown report to PDF (requires `pandoc`).
+- **PDF export** – convert the Markdown report to PDF (requires `pandoc` and `xelatex` for best Unicode support).
 - **JSON output** – machine‑readable version with `--json`.
 - **Smart output naming** – by default uses XML basename + `_report.md` (e.g., `scan.xml` → `scan_report.md`).
 - **Custom output location** – with `-o` (directory or file path).
@@ -43,7 +43,7 @@ The report includes:
 - `requests`
 - `python-dotenv`
 - `nvdlib` (for CPE‑based enrichment)
-- `pandoc` (optional, for PDF export)
+- `pandoc` and `xelatex` (optional, for PDF export)
 
 ## Installation
 
@@ -54,10 +54,9 @@ python3 -m venv venv
 source venv/bin/activate
 pip install requests python-dotenv nvdlib
 
-# Optional: install pandoc for PDF export
-sudo apt install pandoc   # Debian/Ubuntu/Kali
-# or brew install pandoc on macOS
-# or download from https://pandoc.org/installing.html
+# Optional: install pandoc and xelatex for PDF export
+sudo apt install pandoc texlive-xetex   # Debian/Ubuntu/Kali
+# or brew install pandoc basictex on macOS
 ```
 
 ## Configuration (Optional but Recommended)
@@ -103,7 +102,7 @@ The script will still enrich CVEs from `--script vuln` if you provide the key.
 | `--json` | Also generate a JSON version of the report. |
 | `--cpe-enrich` | Enable CPE‑based enrichment (requires API key). |
 | `--max-cpes` | Max number of CPEs to process (by priority). Default: 10. |
-| `--pdf` | Convert the Markdown report to PDF (requires `pandoc`). |
+| `--pdf` | Convert the Markdown report to PDF (requires `pandoc` and `xelatex`). |
 
 Examples:
 
@@ -158,7 +157,7 @@ nmap_report_generator/
 | Total open ports | 398 |
 | Detected OS | Linux 4.19 |
 | Total CVEs found | 42 |
-| **Overall Risk Rating** | **CRITICAL** 🔴 |
+| **Overall Risk Rating** | CRITICAL |
 
 ### Vulnerabilities by Severity
 
@@ -179,7 +178,7 @@ nmap_report_generator/
 
 ### Recommendation
 
-⚠️ **Immediate action required:** Patch or mitigate critical vulnerabilities as soon as possible.
+**Immediate action required:** Patch or mitigate critical vulnerabilities as soon as possible.
 
 ## Host Discovery
 
@@ -196,7 +195,6 @@ nmap_report_generator/
 
 | Port | Protocol | Service | Product | Version |
 |------|----------|---------|---------|---------|
-| 53 | tcp | domain | NLnet Labs NSD | --NO SCANNED-- |
 | 80 | tcp | http | Apache httpd | 2.4.49 |
 | 443 | tcp | http | OpenResty web app server | --NO SCANNED-- |
 ```
@@ -204,6 +202,10 @@ nmap_report_generator/
 ## Limitations & Notes
 
 The report automatically includes a "Limitations & Notes" section based on which flags were **not** used in the scan (e.g., missing `-p-`, `-sU`, `-sC`, etc.), so the reader understands what data might be incomplete.
+
+## Known Issues & Workarounds
+
+- **PDF export**: If you see errors with Unicode characters, make sure you have `xelatex` installed and the script uses it (the `main.py` already configures `--pdf-engine=xelatex`). The report no longer uses emojis to ensure maximum compatibility.
 
 ## License
 
