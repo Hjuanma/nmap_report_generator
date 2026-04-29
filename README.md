@@ -1,5 +1,9 @@
 # Nmap Report Generator
 
+[![License](https://img.shields.io/badge/License-CSL-blue)](LICENSE.md)
+[![Python](https://img.shields.io/badge/Python-3.7%2B-green)](https://www.python.org/)
+[![Code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 Generate a detailed Markdown report from an Nmap XML scan.  
 The report includes host discovery, open ports (only those with identifiable services), OS detection, vulnerabilities (CVEs) found by `--script vuln`, and optional enrichment with NVD data (CVSS, publication date, impact description, solution links).  
 It can also discover additional CVEs by building CPEs from service versions and querying the NVD API, with prioritization of high‑impact services.
